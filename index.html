@@ -4,212 +4,242 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Structural Design Calculator</title>
-    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bubble {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .bubble:hover {
+            transform: scale(1.1);
+        }
+        .bubble.least-cost {
+            background-color: #10b981;
+            color: white;
+            transform: scale(1.1);
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div id="root" class="w-full max-w-6xl"></div>
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-6xl">
+        <h1 class="text-2xl font-bold mb-6 text-center">Structural Design Calculator</h1>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+        <!-- Input Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="input-section">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">UDL (kN/m)</label>
+                <input type="number" id="udl_bc" value="20" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Length BC (m)</label>
+                <input type="number" id="length_bc" value="5" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Column Height (m)</label>
+                <input type="number" id="column_height" value="3" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Beam Width (mm)</label>
+                <input type="number" id="beam_width" value="300" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Beam Depth (mm)</label>
+                <input type="number" id="beam_depth" value="450" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Column Width (mm)</label>
+                <input type="number" id="column_width" value="300" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Column Depth (mm)</label>
+                <input type="number" id="column_depth" value="300" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">SBC (kN/m²)</label>
+                <input type="number" id="sbc" value="150" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Cement Price (per bag)</label>
+                <input type="number" id="cement_price" value="350" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Sand Price (per ton)</label>
+                <input type="number" id="sand_price" value="5000" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Aggregate Price (per ton)</label>
+                <input type="number" id="aggregate_price" value="3000" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Steel 415 Price (per kg)</label>
+                <input type="number" id="steel_415_price" value="60" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Steel 500 Price (per kg)</label>
+                <input type="number" id="steel_500_price" value="65" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Steel 550 Price (per kg)</label>
+                <input type="number" id="steel_550_price" value="70" step="any" class="mt-1 p-2 w-full border rounded-md">
+            </div>
+        </div>
 
-        const DesignCalculator = () => {
-            // State for inputs
-            const [inputs, setInputs] = useState({
-                udl_bc: 20,
-                length_bc: 5,
-                column_height: 3,
-                beam_width: 300,
-                beam_depth: 450,
-                column_width: 300,
-                column_depth: 300,
-                sbc: 150,
-                cement_price: 350,
-                sand_price: 5000,
-                aggregate_price: 3000,
-                steel_415_price: 60,
-                steel_500_price: 65,
-                steel_550_price: 70
-            });
+        <!-- Results Bubbles -->
+        <div class="flex flex-wrap justify-center gap-4 mb-6" id="results-bubbles"></div>
 
-            const [results, setResults] = useState([]);
-            const [selectedResult, setSelectedResult] = useState(null);
+        <!-- Detailed Results -->
+        <div class="mt-6 p-4 bg-gray-100 rounded-lg hidden" id="detailed-results">
+            <h2 class="text-xl font-semibold mb-4" id="result-title"></h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div id="result-costs"></div>
+                <div id="result-moments"></div>
+            </div>
+        </div>
+    </div>
 
-            // Calculate design function (simplified version of your Python code)
-            const calculateDesign = (params, fck, fy) => {
-                const {
-                    udl_bc, length_bc, column_height, beam_width, beam_depth,
-                    column_width, column_depth, sbc, cement_price, sand_price,
-                    aggregate_price, steel_415_price, steel_500_price, steel_550_price
-                } = params;
-
-                // Basic moment calculations
-                const MFbc = -(udl_bc * length_bc ** 2) / 12;
-                const K = 4 / length_bc;
-                const DF = 0.5;
-                let BA = 0, BC = MFbc, CB = -MFbc, CD = 0;
-
-                // Simplified moment distribution (6 iterations)
-                for (let i = 0; i < 6; i++) {
-                    const BA_bal = -(BC + BA) * DF;
-                    const BC_bal = -(BC + BA) * DF;
-                    const CB_bal = -(CB + CD) * DF;
-                    
-                    BA += BA_bal;
-                    BC += BC_bal;
-                    CB += CB_bal;
-                }
-
-                // Reactions and basic quantities
-                const Vc = udl_bc * length_bc * 0.5;
-                const load_on_footing = Vc + 1.5 * (column_width/1000 * column_depth/1000 * 25);
-                
-                // Simplified steel and concrete calculations
-                const beam_steel = (length_bc * 1000 * 0.01 * fy) / 162; // Rough estimate
-                const column_steel = (column_height * 1000 * 0.008 * fy) / 162;
-                const footing_steel = (load_on_footing * 0.005 * fy) / 162;
-                
-                const total_steel = (beam_steel + column_steel + footing_steel) * 4;
-                const concrete_vol = (length_bc * beam_width/1000 * beam_depth/1000 +
-                                   column_height * column_width/1000 * column_depth/1000 +
-                                   load_on_footing/150) * 1.54;
-                
-                const cement_bags = Math.round((concrete_vol * 0.2 * 1440) / 50) * 4;
-                const sand_tons = (concrete_vol * 0.3 * 1450) / 1000 * 4;
-                const aggregate = concrete_vol * 0.6 * 1500 * 4;
-
-                // Cost calculation
-                const steel_price = fy === 415 ? steel_415_price : fy === 500 ? steel_500_price : steel_550_price;
-                const total_cost = (total_steel * steel_price) + 
-                                 (cement_bags * cement_price) + 
-                                 (sand_tons * sand_price) + 
-                                 (aggregate / 1000 * aggregate_price);
-
-                return {
-                    fck,
-                    fy,
-                    total_cost,
-                    steel_weight: total_steel,
-                    cement_bags,
-                    sand_tons,
-                    aggregate,
-                    moments: { BA, BC, CB },
-                    reactions: { Vc }
-                };
-            };
-
-            // Calculate results when inputs change
-            useEffect(() => {
-                const fck_values = [20, 25, 30];
-                const fy_values = [415, 500, 550];
-                const newResults = [];
-
-                for (let fck of fck_values) {
-                    for (let fy of fy_values) {
-                        const result = calculateDesign(inputs, fck, fy);
-                        newResults.push(result);
-                    }
-                }
-
-                setResults(newResults);
-                setSelectedResult(null);
-            }, [inputs]);
-
-            // Find minimum cost
-            const minCost = Math.min(...results.map(r => r.total_cost));
-
-            // Handle input change
-            const handleInputChange = (e) => {
-                const { name, value } = e.target;
-                setInputs(prev => ({
-                    ...prev,
-                    [name]: parseFloat(value) || 0
-                }));
-            };
-
-            // Input fields component
-            const InputField = ({ label, name, value }) => (
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700">{label}</label>
-                    <input
-                        type="number"
-                        name={name}
-                        value={value}
-                        onChange={handleInputChange}
-                        className="mt-1 p-2 w-full border rounded-md"
-                        step="any"
-                    />
-                </div>
-            );
-
-            return (
-                <div className="bg-white p-6 rounded-lg shadow-lg">
-                    <h1 className="text-2xl font-bold mb-6 text-center">Structural Design Calculator</h1>
-                    
-                    {/* Input Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <InputField label="UDL (kN/m)" name="udl_bc" value={inputs.udl_bc} />
-                        <InputField label="Length BC (m)" name="length_bc" value={inputs.length_bc} />
-                        <InputField label="Column Height (m)" name="column_height" value={inputs.column_height} />
-                        <InputField label="Beam Width (mm)" name="beam_width" value={inputs.beam_width} />
-                        <InputField label="Beam Depth (mm)" name="beam_depth" value={inputs.beam_depth} />
-                        <InputField label="Column Width (mm)" name="column_width" value={inputs.column_width} />
-                        <InputField label="Column Depth (mm)" name="column_depth" value={inputs.column_depth} />
-                        <InputField label="SBC (kN/m²)" name="sbc" value={inputs.sbc} />
-                        <InputField label="Cement Price (per bag)" name="cement_price" value={inputs.cement_price} />
-                        <InputField label="Sand Price (per ton)" name="sand_price" value={inputs.sand_price} />
-                        <InputField label="Aggregate Price (per ton)" name="aggregate_price" value={inputs.aggregate_price} />
-                        <InputField label="Steel 415 Price (per kg)" name="steel_415_price" value={inputs.steel_415_price} />
-                        <InputField label="Steel 500 Price (per kg)" name="steel_500_price" value={inputs.steel_500_price} />
-                        <InputField label="Steel 550 Price (per kg)" name="steel_550_price" value={inputs.steel_550_price} />
-                    </div>
-
-                    {/* Results Bubbles */}
-                    <div className="flex flex-wrap justify-center gap-4 mb-6">
-                        {results.map((result, index) => (
-                            <div
-                                key={index}
-                                onClick={() => setSelectedResult(result)}
-                                className={`cursor-pointer p-4 rounded-full text-center transition-all duration-300
-                                    ${result.total_cost === minCost ? 'bg-green-500 text-white scale-110' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                            >
-                                <div>M{fck}-Fe{fy}</div>
-                                <div>₹{result.total_cost.toFixed(2)}</div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Selected Result Details */}
-                    {selectedResult && (
-                        <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-                            <h2 className="text-xl font-semibold mb-4">
-                                Results for M{selectedResult.fck}-Fe{selectedResult.fy}
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <p><strong>Total Cost:</strong> ₹{selectedResult.total_cost.toFixed(2)}</p>
-                                    <p><strong>Steel Weight:</strong> {selectedResult.steel_weight.toFixed(2)} kg</p>
-                                    <p><strong>Cement Bags:</strong> {selectedResult.cement_bags}</p>
-                                    <p><strong>Sand:</strong> {selectedResult.sand_tons.toFixed(2)} tons</p>
-                                    <p><strong>Aggregate:</strong> {selectedResult.aggregate.toFixed(2)} kg</p>
-                                </div>
-                                <div>
-                                    <p><strong>Moment BA:</strong> {selectedResult.moments.BA.toFixed(2)} kN·m</p>
-                                    <p><strong>Moment BC:</strong> {selectedResult.moments.BC.toFixed(2)} kN·m</p>
-                                    <p><strong>Moment CB:</strong> {selectedResult.moments.CB.toFixed(2)} kN·m</p>
-                                    <p><strong>Reaction Vc:</strong> {selectedResult.reactions.Vc.toFixed(2)} kN</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
+    <script>
+        // Get DOM elements
+        const inputs = {
+            udl_bc: document.getElementById('udl_bc'),
+            length_bc: document.getElementById('length_bc'),
+            column_height: document.getElementById('column_height'),
+            beam_width: document.getElementById('beam_width'),
+            beam_depth: document.getElementById('beam_depth'),
+            column_width: document.getElementById('column_width'),
+            column_depth: document.getElementById('column_depth'),
+            sbc: document.getElementById('sbc'),
+            cement_price: document.getElementById('cement_price'),
+            sand_price: document.getElementById('sand_price'),
+            aggregate_price: document.getElementById('aggregate_price'),
+            steel_415_price: document.getElementById('steel_415_price'),
+            steel_500_price: document.getElementById('steel_500_price'),
+            steel_550_price: document.getElementById('steel_550_price')
         };
+        const resultsBubbles = document.getElementById('results-bubbles');
+        const detailedResults = document.getElementById('detailed-results');
+        const resultTitle = document.getElementById('result-title');
+        const resultCosts = document.getElementById('result-costs');
+        const resultMoments = document.getElementById('result-moments');
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<DesignCalculator />);
+        // Calculation function
+        function calculateDesign(fck, fy) {
+            const params = {};
+            for (let key in inputs) {
+                params[key] = parseFloat(inputs[key].value) || 0;
+            }
+
+            const { udl_bc, length_bc, column_height, beam_width, beam_depth, column_width, column_depth, sbc,
+                    cement_price, sand_price, aggregate_price, steel_415_price, steel_500_price, steel_550_price } = params;
+
+            // Simplified moment calculations
+            const MFbc = -(udl_bc * length_bc * length_bc) / 12;
+            let BA = 0, BC = MFbc, CB = -MFbc, CD = 0;
+            const DF = 0.5;
+            for (let i = 0; i < 6; i++) {
+                const BA_bal = -(BC + BA) * DF;
+                const BC_bal = -(BC + BA) * DF;
+                const CB_bal = -(CB + CD) * DF;
+                BA += BA_bal;
+                BC += BC_bal;
+                CB += CB_bal;
+            }
+
+            // Reactions and quantities
+            const Vc = udl_bc * length_bc * 0.5;
+            const load_on_footing = Vc + 1.5 * (column_width / 1000 * column_depth / 1000 * 25);
+
+            // Simplified steel and concrete estimates
+            const beam_steel = (length_bc * 1000 * 0.01 * fy) / 162;
+            const column_steel = (column_height * 1000 * 0.008 * fy) / 162;
+            const footing_steel = (load_on_footing * 0.005 * fy) / 162;
+            const total_steel = (beam_steel + column_steel + footing_steel) * 4;
+
+            const beam_vol = length_bc * (beam_width / 1000) * (beam_depth / 1000);
+            const column_vol = column_height * (column_width / 1000) * (column_depth / 1000);
+            const footing_vol = (load_on_footing / sbc) * 1.5;
+            const total_concrete = (beam_vol + column_vol + footing_vol) * 1.54 * 4;
+
+            const cement_bags = Math.round((total_concrete * 0.2 * 1440) / 50);
+            const sand_tons = (total_concrete * 0.3 * 1450) / 1000;
+            const aggregate_kg = total_concrete * 0.6 * 1500;
+
+            // Cost calculation
+            const steel_price = fy === 415 ? steel_415_price : fy === 500 ? steel_500_price : steel_550_price;
+            const total_cost = (total_steel * steel_price) + (cement_bags * cement_price) +
+                               (sand_tons * sand_price) + (aggregate_kg / 1000 * aggregate_price);
+
+            return {
+                fck,
+                fy,
+                total_cost,
+                steel_weight: total_steel,
+                cement_bags,
+                sand_tons,
+                aggregate: aggregate_kg,
+                moments: { BA, BC, CB },
+                reactions: { Vc }
+            };
+        }
+
+        // Update results
+        function updateResults() {
+            const fck_values = [20, 25, 30];
+            const fy_values = [415, 500, 550];
+            const results = [];
+
+            for (let fck of fck_values) {
+                for (let fy of fy_values) {
+                    results.push(calculateDesign(fck, fy));
+                }
+            }
+
+            const minCost = Math.min(...results.map(r => r.total_cost));
+            resultsBubbles.innerHTML = '';
+            results.forEach(result => {
+                const bubble = document.createElement('div');
+                bubble.className = `bubble ${result.total_cost === minCost ? 'least-cost' : 'bg-blue-500 text-white'}`;
+                bubble.innerHTML = `
+                    <div>M${result.fck}-Fe${result.fy}</div>
+                    <div>₹${result.total_cost.toFixed(2)}</div>
+                `;
+                bubble.addEventListener('click', () => showDetails(result));
+                resultsBubbles.appendChild(bubble);
+            });
+        }
+
+        // Show detailed results
+        function showDetails(result) {
+            detailedResults.classList.remove('hidden');
+            resultTitle.textContent = `Results for M${result.fck}-Fe${result.fy}`;
+            resultCosts.innerHTML = `
+                <p><strong>Total Cost:</strong> ₹${result.total_cost.toFixed(2)}</p>
+                <p><strong>Steel Weight:</strong> ${result.steel_weight.toFixed(2)} kg</p>
+                <p><strong>Cement Bags:</strong> ${result.cement_bags}</p>
+                <p><strong>Sand:</strong> ${result.sand_tons.toFixed(2)} tons</p>
+                <p><strong>Aggregate:</strong> ${result.aggregate.toFixed(2)} kg</p>
+            `;
+            resultMoments.innerHTML = `
+                <p><strong>Moment BA:</strong> ${result.moments.BA.toFixed(2)} kN·m</p>
+                <p><strong>Moment BC:</strong> ${result.moments.BC.toFixed(2)} kN·m</p>
+                <p><strong>Moment CB:</strong> ${result.moments.CB.toFixed(2)} kN·m</p>
+                <p><strong>Reaction Vc:</strong> ${result.reactions.Vc.toFixed(2)} kN</p>
+            `;
+        }
+
+        // Add event listeners for real-time updates
+        for (let key in inputs) {
+            inputs[key].addEventListener('input', updateResults);
+        }
+
+        // Initial calculation
+        updateResults();
     </script>
 </body>
 </html>
