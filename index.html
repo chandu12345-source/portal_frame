@@ -205,12 +205,12 @@
             const min_spacing = Math.min(Sv, 0.7 * d_mid, 300);
 
             // Beam Steel
-            const cutting_length_bar = (length_bc * 1000 + 40 * 16 * 2) / 1000;
+            const cutting_length_bar = (length_bc * 1000 + (40 * 16) + (40 * 16)) / 1000;
             const total_weight_top_bars = Math.round(cutting_length_bar * no_of_bars_support_rounded * (16 ** 2) / 162);
             const total_weight_bottom_bars = Math.round(cutting_length_bar * no_of_bars_mid_rounded * (16 ** 2) / 162);
             const beam_L = (beam_width / 1000) - 0.08;
             const beam_B = (beam_depth / 1000) - 0.08;
-            const cutting_length_stirrups = 2 * (beam_L + beam_B) + 9 * 0.008 * 2;
+            const cutting_length_stirrups = 2 * (beam_L + beam_B) + (9 * 0.008 * 2);
             const no_of_stirrups = Math.round((length_bc / 0.3) + 1);
             const total_weight_stirrups = Math.round(cutting_length_stirrups * no_of_stirrups * (8 ** 2) / 162);
             const total_weight_steel_beam_x4 = (total_weight_top_bars + total_weight_bottom_bars + total_weight_stirrups) * 4;
@@ -238,17 +238,18 @@
             const min_spacing_ties = Math.min(column_width, 16 * 16, 300);
 
             // Column Steel
-            const length_longitudinal_bar_m = (column_height + 2 * (beam_depth / 1000) + 0.3 + (40 * 16) / 1000) - (10 + 10 + 60) / 1000;
+            const length_longitudinal_bar_mm = ((column_height * 1000 + (2 * beam_depth) + (40 * 16) + 300) - (10 + 10 + 60));
+            const length_longitudinal_bar_m = length_longitudinal_bar_mm / 1000;
             const length_4_longitudinal_bars = Math.ceil(length_longitudinal_bar_m * 4);
-            const no_of_lateral_ties = Math.ceil(((length_longitudinal_bar_m * 1000 - (40 * 16 + 300)) / min_spacing_ties) + 1);
+            const no_of_lateral_ties = Math.ceil(((length_longitudinal_bar_mm - (40 * 16 + 300)) / min_spacing_ties) + 1);
             const a_mm = column_width - (2 * 40 + 2 * 8);
             const b_mm = column_depth - (2 * 40 + 2 * 8);
-            const cutting_length_1_lateral_tie = 2 * (a_mm + b_mm) + 2 * (10 * 8) - 3 * (2 * 8);
+            const cutting_length_1_lateral_tie = 2 * (a_mm + b_mm) + (2 * 10 * 8) - (3 * 2 * 8);
             const total_length_lateral_ties_m = Math.ceil((cutting_length_1_lateral_tie / 1000) * no_of_lateral_ties);
             const weight_longitudinal_bars = (16 ** 2 / 162.2) * length_4_longitudinal_bars;
             const weight_lateral_ties = (8 ** 2 / 162.2) * total_length_lateral_ties_m;
             const total_weight_steel_column = weight_longitudinal_bars + weight_lateral_ties;
-            const gross_weight_steel_x4 = Math.round((total_weight_steel_column * 1.05) * 4);
+            const gross_weight_steel_x4 = Math.round((total_weight_steel_column + (0.05 * total_weight_steel_column)) * 4);
 
             // Column Concrete
             const volume_column = column_height * (column_width / 1000) * (column_depth / 1000);
@@ -266,7 +267,7 @@
             const weight_aggregate_column_x4 = weight_aggregate_column * 4;
 
             // Footing Design
-            const P = load_on_footing * 1.1;
+            const P = load_on_footing + (0.1 * load_on_footing);
             const Mu_footing = moment_on_footing;
             const width_of_footing = 1.0;
             const func_footing = (footing_L) => (P / (width_of_footing * footing_L)) + (6 * Mu_footing / (width_of_footing * footing_L * footing_L)) - sbc;
@@ -295,22 +296,25 @@
             const func_ast = (Ast) => 0.87 * fy * Ast * effective_depth * (1 - (Ast * fy) / (1000 * effective_depth * fck)) - Mu_reinforcement;
             const dfunc_ast = (Ast) => 0.87 * fy * effective_depth * (1 - (2 * Ast * fy) / (1000 * effective_depth * fck));
             let Ast_footing = effective_depth > 0 ? newtonRaphson(func_ast, dfunc_ast, 1000) || 0 : 0;
-            const no_of_bars_footing = Ast_footing > 0 ? Math.ceil(Ast_footing / 78.54) : 0;
-            const spacing_footing = Ast_footing > 0 ? Math.round((1000 * 78.54) / Ast_footing) : 0;
+            const bar_area = 78.54; // 10mm dia
+            const no_of_bars_footing = Ast_footing > 0 ? Math.ceil(Ast_footing / bar_area) : 0;
+            const spacing_footing = Ast_footing > 0 ? Math.round((1000 * bar_area) / Ast_footing) : 0;
             let gross_weight_steel_footing = 0;
             if (no_of_bars_footing > 0 && L_1 > 0) {
                 const effective_length_x = L_1 * 1000 - 120;
                 const effective_length_y = width_of_footing * 1000 - 120;
                 const no_of_bars_x = Math.ceil((effective_length_y / spacing_footing) + 1);
                 const no_of_bars_y = Math.ceil((effective_length_x / spacing_footing) + 1);
-                const cutting_length_bar_x = (effective_length_x + 2 * (overall_depth_shear - 120 - 40)) / 1000;
-                const cutting_length_bar_y = (effective_length_y + 2 * (overall_depth_shear - 120 - 40)) / 1000;
+                const cutting_length_bar_x = (effective_length_x + 2 * ((overall_depth_shear - 60 - 60) - (2 * 2 * 10))) / 1000;
+                const cutting_length_bar_y = (effective_length_y + 2 * ((overall_depth_shear - 60 - 60) - (2 * 2 * 10))) / 1000;
                 const total_length_x = Math.round(no_of_bars_x * cutting_length_bar_x);
                 const total_length_y = Math.round(no_of_bars_y * cutting_length_bar_y);
                 const weight_steel_x = (10 ** 2 / 162.2) * total_length_x;
                 const weight_steel_y = (10 ** 2 / 162.2) * total_length_y;
-                gross_weight_steel_footing = Math.round((weight_steel_x + weight_steel_y) * 1.05);
+                const total_weight_steel = weight_steel_x + weight_steel_y;
+                gross_weight_steel_footing = Math.round(total_weight_steel + (0.05 * total_weight_steel));
             }
+            const gross_weight_steel_footing_x4 = gross_weight_steel_footing * 4;
 
             // Footing Concrete
             const volume_footing = L_1 * width_of_footing * (overall_depth_shear / 1000);
@@ -329,7 +333,7 @@
 
             // Cost
             const steel_price = fy === 415 ? steel_415_price : fy === 500 ? steel_500_price : steel_550_price;
-            const total_steel_weight_x4 = total_weight_steel_beam_x4 + gross_weight_steel_x4 + (gross_weight_steel_footing * 4);
+            const total_steel_weight_x4 = total_weight_steel_beam_x4 + gross_weight_steel_x4 + gross_weight_steel_footing_x4;
             const steel_cost = total_steel_weight_x4 * steel_price;
             const cement_cost = (no_cement_bags_x4 + no_cement_bags_column_x4 + no_cement_bags_footing_x4) * cement_price;
             const sand_cost = (sand_tons_x4 + sand_tons_column_x4 + sand_tons_footing_x4) * sand_price;
@@ -391,7 +395,7 @@
                 <div><h3 class="font-bold">Concrete Quantity Calculation for Column:</h3><p>Weight of cement: ${result.weight_cement_column.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags_column}</p><p>Weight of sand: ${result.weight_sand_column.toFixed(2)} kg (${result.sand_tons_column.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate_column.toFixed(2)} kg</p><p>Weight of cement (x4): ${(result.weight_cement_column * 4).toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_column_x4}</p><p>Weight of sand (x4): ${result.sand_tons_column_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_column_x4.toFixed(2)} kg</p></div>
                 <div><h3 class="font-bold">Footing Design:</h3><p>The required length of the footing (L) is: ${result.footing_L.toFixed(4)} meters</p><p>REVISED VALUE OF L_1: ${result.L_1.toFixed(4)} meters</p><p>Sigma Max: ${result.sigma_max.toFixed(4)} kN/m²</p><p>Sigma Min: ${result.sigma_min.toFixed(4)} kN/m²</p>${result.effective_depth > 0 ? `<p>The required effective depth of the footing (d) is: ${result.effective_depth.toFixed(4)} mm</p><p>Overall depth D = d + 60 (rounded to nearest 10): ${Math.round((result.effective_depth + 60) / 10) * 10} mm</p><p>Overall depth for shear consideration (2*D): ${result.overall_depth_shear} mm</p><p>Effective depth (Overall depth - 60): ${result.effective_depth.toFixed(4)} mm</p>` : ''}</div>
                 <div><h3 class="font-bold">Footing Reinforcement Calculation:</h3><p>The required area of reinforcement (Ast) is: ${result.Ast_footing.toFixed(2)} mm²</p>${result.no_of_bars_footing > 0 ? `<p>Provide ${result.no_of_bars_footing} bars of 10 mm dia at ${result.spacing_footing} mm c/c</p>` : ''}</div>
-                <div><h3 class="font-bold">Steel Quantity of Footing:</h3><p>Gross weight of steel (including 5% wastage): ${result.gross_weight_steel_footing} kg</p><p>Gross weight of steel (including 5% wastage) (x4): ${(result.gross_weight_steel_footing * 4)} kg</p></div>
+                <div><h3 class="font-bold">Steel Quantity of Footing:</h3><p>Gross weight of steel (including 5% wastage): ${result.gross_weight_steel_footing} kg</p><p>Gross weight of steel (including 5% wastage) (x4): ${result.gross_weight_steel_footing_x4} kg</p></div>
                 <div><h3 class="font-bold">Concrete Quantity Calculation for Footing:</h3><p>Weight of cement: ${result.weight_cement_footing.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags_footing}</p><p>Weight of sand: ${result.weight_sand_footing.toFixed(2)} kg (${result.sand_tons_footing.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate_footing.toFixed(2)} kg</p><p>Weight of cement (x4): ${(result.weight_cement_footing * 4).toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_footing_x4}</p><p>Weight of sand (x4): ${result.sand_tons_footing_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_footing_x4.toFixed(2)} kg</p></div>
                 <div><h3 class="font-bold">Cost Calculation (for 4 units):</h3><p>Total steel weight: ${result.total_steel_weight_x4.toFixed(2)} kg</p><p>Steel cost: ${result.steel_cost.toFixed(2)}</p><p>Cement cost: ${result.cement_cost.toFixed(2)}</p><p>Sand cost: ${result.sand_cost.toFixed(2)}</p><p>Aggregate cost: ${result.aggregate_cost.toFixed(2)}</p><p>Total cost: ${result.total_cost.toFixed(2)}</p></div>
             `;
