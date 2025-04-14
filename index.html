@@ -81,20 +81,17 @@
         const resultTitle = document.getElementById('result-title');
         const resultContent = document.getElementById('result-content');
 
-        function round(value, decimals = 4) {
+        function round(value, decimals = 2) {
             return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
         }
 
-        function newtonRaphson(func, dfunc, x0, tol = 1e-6, maxIter = 100) {
-            let x = x0;
-            for (let i = 0; i < maxIter; i++) {
-                let fx = func(x);
-                let dfx = dfunc(x);
-                if (Math.abs(fx) < tol) return x;
-                if (dfx === 0) return null;
-                x = x - fx / dfx;
-            }
-            return null;
+        function solveQuadratic(a, b, c) {
+            const discriminant = b * b - 4 * a * c;
+            if (discriminant < 0) return [];
+            const sqrtD = Math.sqrt(discriminant);
+            const x1 = (-b + sqrtD) / (2 * a);
+            const x2 = (-b - sqrtD) / (2 * a);
+            return [x1, x2].filter(x => x > 0);
         }
 
         const tau_table = {
@@ -179,18 +176,22 @@
             const Mu_support = M_support * 1e6;
             const b_support = beam_width;
             const d_support = beam_depth - 40;
-            const func_support = (Ast) => 0.87 * fy * Ast * d_support * (1 - (Ast * fy) / (b_support * d_support * fck)) - Mu_support;
-            const dfunc_support = (Ast) => 0.87 * fy * d_support * (1 - (2 * Ast * fy) / (b_support * d_support * fck));
-            let Ast_support = newtonRaphson(func_support, dfunc_support, 1000) || 0;
+            const a_support = (0.87 * fy * d_support * fy) / (b_support * d_support * fck);
+            const b_support_coeff = -0.87 * fy * d_support;
+            const c_support = Mu_support;
+            let Ast_support_solutions = solveQuadratic(a_support, b_support_coeff, c_support);
+            let Ast_support = Ast_support_solutions.length > 0 ? Ast_support_solutions[0] : 0;
             let no_of_bars_support = Ast_support > 0 ? Ast_support / 201 : 0;
             const no_of_bars_support_rounded = no_of_bars_support > 0 ? (no_of_bars_support % 1 >= 0.1 ? Math.ceil(no_of_bars_support) : Math.round(no_of_bars_support)) : 0;
 
             const Mu_mid = M_mid * 1e6;
             const b_mid = Bf;
             const d_mid = beam_depth - 40;
-            const func_mid = (Ast) => 0.87 * fy * Ast * d_mid * (1 - (Ast * fy) / (b_mid * d_mid * fck)) - Mu_mid;
-            const dfunc_mid = (Ast) => 0.87 * fy * d_mid * (1 - (2 * Ast * fy) / (b_mid * d_mid * fck));
-            let Ast_mid = newtonRaphson(func_mid, dfunc_mid, 1000) || 0;
+            const a_mid = (0.87 * fy * d_mid * fy) / (b_mid * d_mid * fck);
+            const b_mid_coeff = -0.87 * fy * d_mid;
+            const c_mid = Mu_mid;
+            let Ast_mid_solutions = solveQuadratic(a_mid, b_mid_coeff, c_mid);
+            let Ast_mid = Ast_mid_solutions.length > 0 ? Ast_mid_solutions[0] : 0;
             let no_of_bars_mid = Ast_mid > 0 ? Ast_mid / 201 : 0;
             const no_of_bars_mid_rounded = no_of_bars_mid > 0 ? (no_of_bars_mid % 1 >= 0.1 ? Math.ceil(no_of_bars_mid) : Math.round(no_of_bars_mid)) : 0;
 
@@ -270,9 +271,11 @@
             const P = load_on_footing + (0.1 * load_on_footing);
             const Mu_footing = moment_on_footing;
             const width_of_footing = 1.0;
-            const func_footing = (footing_L) => (P / (width_of_footing * footing_L)) + (6 * Mu_footing / (width_of_footing * footing_L * footing_L)) - sbc;
-            const dfunc_footing = (footing_L) => -P / (width_of_footing * footing_L * footing_L) - 12 * Mu_footing / (width_of_footing * footing_L * footing_L * footing_L);
-            let footing_L = newtonRaphson(func_footing, dfunc_footing, 1.0) || 0;
+            const a_footing = -6 * Mu_footing / width_of_footing;
+            const b_footing = -P / width_of_footing;
+            const c_footing = sbc;
+            let footing_solutions = solveQuadratic(a_footing, b_footing, c_footing);
+            let footing_L = footing_solutions.length > 0 ? footing_solutions.find(x => x > 0) || 0 : 0;
             let L_1 = footing_L > 0 ? 0.5543 + footing_L : 0;
             let sigma_max = L_1 > 0 ? (P / (width_of_footing * L_1)) + (6 * Mu_footing / (width_of_footing * L_1 * L_1)) : 0;
             let sigma_min = L_1 > 0 ? (P / (width_of_footing * L_1)) - (6 * Mu_footing / (width_of_footing * L_1 * L_1)) : 0;
@@ -282,20 +285,21 @@
                 const X1 = (sigma_max - sigma_min) * distance_without_column + column_width / 1000;
                 const height_of_triangle = sigma_max - (X1 + sigma_min);
                 const Mx = (0.5 * distance_without_column * height_of_triangle * 0.66 * distance_without_column) + 
-                          (distance_without_column * (X1 + sigma_min) * 0.5 * distance_without_column);
+                           (distance_without_column * (X1 + sigma_min) * 0.5 * distance_without_column);
                 const Mlim = 1.5 * Mx * 1e6;
-                const func_d = (d) => 0.138 * fck * 1000 * d * d - Mlim;
-                const dfunc_d = (d) => 0.138 * fck * 1000 * 2 * d;
-                effective_depth = newtonRaphson(func_d, dfunc_d, 100) || 0;
+                const d_solutions = solveQuadratic(0.138 * fck * 1000, 0, -Mlim);
+                effective_depth = d_solutions.length > 0 ? d_solutions.find(x => x > 0) || 0 : 0;
                 overall_depth_shear = effective_depth > 0 ? Math.round((effective_depth + 60) / 10) * 10 * 2 : 0;
                 effective_depth = overall_depth_shear > 0 ? overall_depth_shear - 60 : 0;
             }
 
             // Footing Reinforcement
             const Mu_reinforcement = Mu_footing * 1e6;
-            const func_ast = (Ast) => 0.87 * fy * Ast * effective_depth * (1 - (Ast * fy) / (1000 * effective_depth * fck)) - Mu_reinforcement;
-            const dfunc_ast = (Ast) => 0.87 * fy * effective_depth * (1 - (2 * Ast * fy) / (1000 * effective_depth * fck));
-            let Ast_footing = effective_depth > 0 ? newtonRaphson(func_ast, dfunc_ast, 1000) || 0 : 0;
+            const a_ast = (0.87 * fy * effective_depth * fy) / (1000 * effective_depth * fck);
+            const b_ast = -0.87 * fy * effective_depth;
+            const c_ast = Mu_reinforcement;
+            let Ast_footing_solutions = solveQuadratic(a_ast, b_ast, c_ast);
+            let Ast_footing = effective_depth > 0 ? (Ast_footing_solutions.length > 0 ? Ast_footing_solutions[0] : 0) : 0;
             const bar_area = 78.54; // 10mm dia
             const no_of_bars_footing = Ast_footing > 0 ? Math.ceil(Ast_footing / bar_area) : 0;
             const spacing_footing = Ast_footing > 0 ? Math.round((1000 * bar_area) / Ast_footing) : 0;
@@ -305,8 +309,8 @@
                 const effective_length_y = width_of_footing * 1000 - 120;
                 const no_of_bars_x = Math.ceil((effective_length_y / spacing_footing) + 1);
                 const no_of_bars_y = Math.ceil((effective_length_x / spacing_footing) + 1);
-                const cutting_length_bar_x = (effective_length_x + 2 * ((overall_depth_shear - 60 - 60) - (2 * 2 * 10))) / 1000;
-                const cutting_length_bar_y = (effective_length_y + 2 * ((overall_depth_shear - 60 - 60) - (2 * 2 * 10))) / 1000;
+                const cutting_length_bar_x = (effective_length_x + 2 * ((overall_depth_shear - 120) - (2 * 2 * 10))) / 1000;
+                const cutting_length_bar_y = (effective_length_y + 2 * ((overall_depth_shear - 120) - (2 * 2 * 10))) / 1000;
                 const total_length_x = Math.round(no_of_bars_x * cutting_length_bar_x);
                 const total_length_y = Math.round(no_of_bars_y * cutting_length_bar_y);
                 const weight_steel_x = (10 ** 2 / 162.2) * total_length_x;
