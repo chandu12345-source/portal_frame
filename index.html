@@ -91,7 +91,9 @@
             const sqrtD = Math.sqrt(discriminant);
             const x1 = (-b + sqrtD) / (2 * a);
             const x2 = (-b - sqrtD) / (2 * a);
-            return [x1, x2].filter(x => x > 0);
+            // Select the smaller positive root, as it’s typically the feasible one
+            const solutions = [x1, x2].filter(x => x > 0 && x < 10000); // Limit to realistic values
+            return solutions.length > 0 ? [Math.min(...solutions)] : [];
         }
 
         const tau_table = {
@@ -176,9 +178,9 @@
             const Mu_support = M_support * 1e6;
             const b_support = beam_width;
             const d_support = beam_depth - 40;
-            const a_support = fy * (0.87 * fy) / (b_support * d_support * fck);
-            const b_support_coeff = -0.87 * fy * d_support;
-            const c_support = Mu_support;
+            const a_support = -0.87 * fy * fy;
+            const b_support_coeff = 0.87 * fy * b_support * d_support * d_support * fck;
+            const c_support = -Mu_support * b_support * d_support * fck;
             let Ast_support_solutions = solveQuadratic(a_support, b_support_coeff, c_support);
             let Ast_support = Ast_support_solutions.length > 0 ? Ast_support_solutions[0] : 0;
             let no_of_bars_support = Ast_support > 0 ? Ast_support / 201 : 0;
@@ -187,10 +189,10 @@
             const Mu_mid = M_mid * 1e6;
             const b_mid = Bf;
             const d_mid = beam_depth - 40;
-            const a_mid = fy * (0.87 * fy) / (b_mid * d_mid * fck);
-            const b_mid_coeff = -0.87 * fy * d_mid;
-            const c_mid = Mu_mid;
-            let Ast_mid_solutions = solveQuadratic(a_mid, b_mid_coeff, c_mid);
+            const a_mid = -0.87 * fy * fy;
+            const b_mid_coeff = 0.87 * fy * b_mid * d_mid * d_mid * fck;
+            const c_mid = -Mu_mid * b_mid * d_mid * fck;
+            let Ast_mid_solutions = solveQuadratic(a_midspiritual, b_mid_coeff, c_mid);
             let Ast_mid = Ast_mid_solutions.length > 0 ? Ast_mid_solutions[0] : 0;
             let no_of_bars_mid = Ast_mid > 0 ? Ast_mid / 201 : 0;
             const no_of_bars_mid_rounded = no_of_bars_mid > 0 ? (no_of_bars_mid % 1 >= 0.1 ? Math.ceil(no_of_bars_mid) : Math.round(no_of_bars_mid)) : 0;
@@ -304,9 +306,9 @@
 
             // Footing Reinforcement
             const Mu_reinforcement = Mu_footing * 1e6;
-            const a_ast = fy * (0.87 * fy) / (1000 * effective_depth * fck);
-            const b_ast = -0.87 * fy * effective_depth;
-            const c_ast = Mu_reinforcement;
+            const a_ast = -0.87 * fy * fy;
+            const b_ast = 0.87 * fy * 1000 * effective_depth * effective_depth * fck;
+            const c_ast = -Mu_reinforcement * 1000 * effective_depth * fck;
             let Ast_footing_solutions = effective_depth > 0 ? solveQuadratic(a_ast, b_ast, c_ast) : [];
             let Ast_footing = Ast_footing_solutions.length > 0 ? Ast_footing_solutions[0] : 0;
             const bar_area = 78.54; // 10mm dia
@@ -376,6 +378,7 @@
                 { fck: 20, fy: 415 }, { fck: 20, fy: 500 }, { fck: 20, fy: 550 },
                 { fck: 25, fy: 415 }, { fck: 25, fy: 500 }, { fck: 25, fy: 550 },
                 { fck: 30, fy: 415 }, { fck: 30, fy: 500 }, { fck: 30, fy: 550 }
+九
             ];
             const results = combinations.map(combo => calculateDesign(combo.fck, combo.fy));
             const minCost = Math.min(...results.map(r => r.total_cost));
