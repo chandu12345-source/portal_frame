@@ -176,7 +176,7 @@
             const Mu_support = M_support * 1e6;
             const b_support = beam_width;
             const d_support = beam_depth - 40;
-            const a_support = (0.87 * fy * d_support * fy) / (b_support * d_support * fck);
+            const a_support = fy * (0.87 * fy) / (b_support * d_support * fck);
             const b_support_coeff = -0.87 * fy * d_support;
             const c_support = Mu_support;
             let Ast_support_solutions = solveQuadratic(a_support, b_support_coeff, c_support);
@@ -187,7 +187,7 @@
             const Mu_mid = M_mid * 1e6;
             const b_mid = Bf;
             const d_mid = beam_depth - 40;
-            const a_mid = (0.87 * fy * d_mid * fy) / (b_mid * d_mid * fck);
+            const a_mid = fy * (0.87 * fy) / (b_mid * d_mid * fck);
             const b_mid_coeff = -0.87 * fy * d_mid;
             const c_mid = Mu_mid;
             let Ast_mid_solutions = solveQuadratic(a_mid, b_mid_coeff, c_mid);
@@ -199,7 +199,7 @@
             const Tv = (Load_Pu * 1000) / (beam_width * d_support);
             const shear_reinforcement_ratio = (100 * no_of_bars_mid_rounded * 201) / (beam_width * d_support);
             const shear_strength = calculateShearStrength(shear_reinforcement_ratio, fck);
-            const Asv = 100.53;
+            const Asv = 100.53; // 2-legged 8mm dia
             const Tc = shear_strength;
             const vus = (Load_Pu * 1000) - (Tc * beam_width * d_support);
             const Sv = vus > 0 ? (0.87 * fy * Asv * d_support) / vus : Infinity;
@@ -214,12 +214,13 @@
             const cutting_length_stirrups = 2 * (beam_L + beam_B) + (9 * 0.008 * 2);
             const no_of_stirrups = Math.round((length_bc / 0.3) + 1);
             const total_weight_stirrups = Math.round(cutting_length_stirrups * no_of_stirrups * (8 ** 2) / 162);
-            const total_weight_steel_beam_x4 = (total_weight_top_bars + total_weight_bottom_bars + total_weight_stirrups) * 4;
+            const total_weight_steel_beam = total_weight_top_bars + total_weight_bottom_bars + total_weight_stirrups;
+            const total_weight_steel_beam_x4 = total_weight_steel_beam * 4;
 
             // Beam Concrete
             const volume = length_bc * (beam_width / 1000) * (beam_depth / 1000);
             const dry_volume = volume * 1.54;
-            const total_ratio = 5.5;
+            const total_ratio = 1 + 1.5 + 3;
             const volume_cement = (1 / total_ratio) * dry_volume;
             const volume_sand = (1.5 / total_ratio) * dry_volume;
             const volume_aggregate = (3 / total_ratio) * dry_volume;
@@ -228,8 +229,10 @@
             const weight_sand = 1450 * volume_sand;
             const sand_tons = weight_sand / 1000;
             const weight_aggregate = 1500 * volume_aggregate;
-            const no_cement_bags_x4 = Math.round((weight_cement * 4) / 50);
-            const sand_tons_x4 = (weight_sand * 4) / 1000;
+            const weight_cement_x4 = weight_cement * 4;
+            const no_cement_bags_x4 = Math.round(weight_cement_x4 / 50);
+            const weight_sand_x4 = weight_sand * 4;
+            const sand_tons_x4 = weight_sand_x4 / 1000;
             const weight_aggregate_x4 = weight_aggregate * 4;
 
             // Column Design
@@ -239,7 +242,8 @@
             const min_spacing_ties = Math.min(column_width, 16 * 16, 300);
 
             // Column Steel
-            const length_longitudinal_bar_mm = ((column_height * 1000 + (2 * beam_depth) + (40 * 16) + 300) - (10 + 10 + 60));
+            const D = beam_depth / 1000;
+            const length_longitudinal_bar_mm = ((column_height * 1000 + (2 * D * 1000) + (40 * 16) + 300) - (10 + 10 + 60));
             const length_longitudinal_bar_m = length_longitudinal_bar_mm / 1000;
             const length_4_longitudinal_bars = Math.ceil(length_longitudinal_bar_m * 4);
             const no_of_lateral_ties = Math.ceil(((length_longitudinal_bar_mm - (40 * 16 + 300)) / min_spacing_ties) + 1);
@@ -250,7 +254,8 @@
             const weight_longitudinal_bars = (16 ** 2 / 162.2) * length_4_longitudinal_bars;
             const weight_lateral_ties = (8 ** 2 / 162.2) * total_length_lateral_ties_m;
             const total_weight_steel_column = weight_longitudinal_bars + weight_lateral_ties;
-            const gross_weight_steel_x4 = Math.round((total_weight_steel_column + (0.05 * total_weight_steel_column)) * 4);
+            const gross_weight_steel = total_weight_steel_column + (0.05 * total_weight_steel_column);
+            const gross_weight_steel_x4 = Math.round(gross_weight_steel * 4);
 
             // Column Concrete
             const volume_column = column_height * (column_width / 1000) * (column_depth / 1000);
@@ -263,17 +268,19 @@
             const weight_sand_column = 1450 * volume_sand_column;
             const sand_tons_column = weight_sand_column / 1000;
             const weight_aggregate_column = 1500 * volume_aggregate_column;
-            const no_cement_bags_column_x4 = Math.round((weight_cement_column * 4) / 50);
-            const sand_tons_column_x4 = (weight_sand_column * 4) / 1000;
+            const weight_cement_column_x4 = weight_cement_column * 4;
+            const no_cement_bags_column_x4 = Math.round(weight_cement_column_x4 / 50);
+            const weight_sand_column_x4 = weight_sand_column * 4;
+            const sand_tons_column_x4 = weight_sand_column_x4 / 1000;
             const weight_aggregate_column_x4 = weight_aggregate_column * 4;
 
             // Footing Design
             const P = load_on_footing + (0.1 * load_on_footing);
             const Mu_footing = moment_on_footing;
             const width_of_footing = 1.0;
-            const a_footing = -6 * Mu_footing / width_of_footing;
-            const b_footing = -P / width_of_footing;
-            const c_footing = sbc;
+            const a_footing = 6 * Mu_footing / (width_of_footing);
+            const b_footing = P / width_of_footing;
+            const c_footing = -sbc;
             let footing_solutions = solveQuadratic(a_footing, b_footing, c_footing);
             let footing_L = footing_solutions.length > 0 ? footing_solutions.find(x => x > 0) || 0 : 0;
             let L_1 = footing_L > 0 ? 0.5543 + footing_L : 0;
@@ -282,35 +289,37 @@
             let effective_depth = 0, overall_depth_shear = 0;
             if (L_1 > 0) {
                 const distance_without_column = (L_1 - column_width / 1000) * 0.5;
-                const X1 = (sigma_max - sigma_min) * distance_without_column + column_width / 1000;
+                const X1 = (sigma_max - sigma_min) * distance_without_column + (column_width / 1000);
                 const height_of_triangle = sigma_max - (X1 + sigma_min);
-                const Mx = (0.5 * distance_without_column * height_of_triangle * 0.66 * distance_without_column) + 
+                const Mx = (0.5 * distance_without_column * height_of_triangle * 0.66 * distance_without_column) +
                            (distance_without_column * (X1 + sigma_min) * 0.5 * distance_without_column);
-                const Mlim = 1.5 * Mx * 1e6;
+                const Mu = 1.5 * Mx;
+                const Mlim = Mu * 1e6;
                 const d_solutions = solveQuadratic(0.138 * fck * 1000, 0, -Mlim);
                 effective_depth = d_solutions.length > 0 ? d_solutions.find(x => x > 0) || 0 : 0;
-                overall_depth_shear = effective_depth > 0 ? Math.round((effective_depth + 60) / 10) * 10 * 2 : 0;
+                const D = effective_depth > 0 ? effective_depth + 60 : 0;
+                overall_depth_shear = D > 0 ? Math.round(D / 10) * 10 * 2 : 0;
                 effective_depth = overall_depth_shear > 0 ? overall_depth_shear - 60 : 0;
             }
 
             // Footing Reinforcement
             const Mu_reinforcement = Mu_footing * 1e6;
-            const a_ast = (0.87 * fy * effective_depth * fy) / (1000 * effective_depth * fck);
+            const a_ast = fy * (0.87 * fy) / (1000 * effective_depth * fck);
             const b_ast = -0.87 * fy * effective_depth;
             const c_ast = Mu_reinforcement;
-            let Ast_footing_solutions = solveQuadratic(a_ast, b_ast, c_ast);
-            let Ast_footing = effective_depth > 0 ? (Ast_footing_solutions.length > 0 ? Ast_footing_solutions[0] : 0) : 0;
+            let Ast_footing_solutions = effective_depth > 0 ? solveQuadratic(a_ast, b_ast, c_ast) : [];
+            let Ast_footing = Ast_footing_solutions.length > 0 ? Ast_footing_solutions[0] : 0;
             const bar_area = 78.54; // 10mm dia
             const no_of_bars_footing = Ast_footing > 0 ? Math.ceil(Ast_footing / bar_area) : 0;
             const spacing_footing = Ast_footing > 0 ? Math.round((1000 * bar_area) / Ast_footing) : 0;
             let gross_weight_steel_footing = 0;
             if (no_of_bars_footing > 0 && L_1 > 0) {
-                const effective_length_x = L_1 * 1000 - 120;
-                const effective_length_y = width_of_footing * 1000 - 120;
+                const effective_length_x = L_1 * 1000 - (2 * 60);
+                const effective_length_y = width_of_footing * 1000 - (2 * 60);
                 const no_of_bars_x = Math.ceil((effective_length_y / spacing_footing) + 1);
                 const no_of_bars_y = Math.ceil((effective_length_x / spacing_footing) + 1);
-                const cutting_length_bar_x = (effective_length_x + 2 * ((overall_depth_shear - 120) - (2 * 2 * 10))) / 1000;
-                const cutting_length_bar_y = (effective_length_y + 2 * ((overall_depth_shear - 120) - (2 * 2 * 10))) / 1000;
+                const cutting_length_bar_x = (effective_length_x + 2 * ((overall_depth_shear - 60 - 60) - (2 * 2 * 10))) / 1000;
+                const cutting_length_bar_y = (effective_length_y + 2 * ((overall_depth_shear - 60 - 60) - (2 * 2 * 10))) / 1000;
                 const total_length_x = Math.round(no_of_bars_x * cutting_length_bar_x);
                 const total_length_y = Math.round(no_of_bars_y * cutting_length_bar_y);
                 const weight_steel_x = (10 ** 2 / 162.2) * total_length_x;
@@ -331,8 +340,10 @@
             const weight_sand_footing = 1450 * volume_sand_footing;
             const sand_tons_footing = weight_sand_footing / 1000;
             const weight_aggregate_footing = 1500 * volume_aggregate_footing;
-            const no_cement_bags_footing_x4 = Math.round((weight_cement_footing * 4) / 50);
-            const sand_tons_footing_x4 = (weight_sand_footing * 4) / 1000;
+            const weight_cement_footing_x4 = weight_cement_footing * 4;
+            const no_cement_bags_footing_x4 = Math.round(weight_cement_footing_x4 / 50);
+            const weight_sand_footing_x4 = weight_sand_footing * 4;
+            const sand_tons_footing_x4 = weight_sand_footing_x4 / 1000;
             const weight_aggregate_footing_x4 = weight_aggregate_footing * 4;
 
             // Cost
@@ -393,14 +404,14 @@
                 <div><h3 class="font-bold">Mid Span Cross Section Reinforcement:</h3><p>The required area of reinforcement for mid span cross section of beam (Ast_mid) is: ${result.Ast_mid.toFixed(2)} mm²</p><p>Number of 16 mm bars required for mid span cross section: ${result.no_of_bars_mid_rounded}</p></div>
                 <div><h3 class="font-bold">Beam Shear Design:</h3><p>Shear Stress (Tv): ${result.Tv.toFixed(4)} N/mm²</p><p>Calculated Shear Strength: ${result.shear_strength.toFixed(4)} N/mm²</p>${result.shear_strength < result.Tv ? `<p>Shear reinforcement is required.</p><p>The value of Sv is: ${result.Sv.toFixed(2)} mm</p><p>Minimum spacing required: ${result.min_spacing.toFixed(2)} mm</p><p>Provide 2-legged 8 mm dia of spacing ${result.min_spacing.toFixed(2)} mm</p>` : ''}</div>
                 <div><h3 class="font-bold">Beam Steel Quantity Calculation (16 mm dia):</h3><p>Number of top bars: ${result.no_of_bars_support_rounded}</p><p>Number of bottom bars: ${result.no_of_bars_mid_rounded}</p><p>Total weight of top bars: ${result.total_weight_top_bars} kg</p><p>Total weight of bottom bars: ${result.total_weight_bottom_bars} kg</p><p>Number of stirrups: ${result.no_of_stirrups}</p><p>Total weight of stirrups: ${result.total_weight_stirrups} kg</p><p>Total weight of steel for beam (x4): ${result.total_weight_steel_beam_x4} kg</p></div>
-                <div><h3 class="font-bold">Concrete Quantity Calculation for Beam:</h3><p>Weight of cement: ${result.weight_cement.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags}</p><p>Weight of sand: ${result.weight_sand.toFixed(2)} kg (${result.sand_tons.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate.toFixed(2)} kg</p><p>Weight of cement (x4): ${(result.weight_cement * 4).toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_x4}</p><p>Weight of sand (x4): ${result.sand_tons_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_x4.toFixed(2)} kg</p></div>
+                <div><h3 class="font-bold">Concrete Quantity Calculation for Beam:</h3><p>Weight of cement: ${result.weight_cement.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags}</p><p>Weight of sand: ${result.weight_sand.toFixed(2)} kg (${result.sand_tons.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate.toFixed(2)} kg</p><p>Weight of cement (x4): ${result.weight_cement_x4.toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_x4}</p><p>Weight of sand (x4): ${result.sand_tons_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_x4.toFixed(2)} kg</p></div>
                 <div><h3 class="font-bold">Column Design:</h3><p>Column Area (Ag): ${result.Ag.toFixed(2)} mm²</p><p>Minimum reinforcement required: ${result.min_reinforcement.toFixed(2)} mm²</p><p>Number of 16 mm bars required: ${result.no_of_bars_column}</p><p>Provide 8 mm bars at spacing of ${result.min_spacing_ties.toFixed(2)} mm</p></div>
                 <div><h3 class="font-bold">Column Steel Calculation:</h3><p>Gross weight of steel in column (x4): ${result.gross_weight_steel_x4} kg</p></div>
-                <div><h3 class="font-bold">Concrete Quantity Calculation for Column:</h3><p>Weight of cement: ${result.weight_cement_column.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags_column}</p><p>Weight of sand: ${result.weight_sand_column.toFixed(2)} kg (${result.sand_tons_column.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate_column.toFixed(2)} kg</p><p>Weight of cement (x4): ${(result.weight_cement_column * 4).toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_column_x4}</p><p>Weight of sand (x4): ${result.sand_tons_column_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_column_x4.toFixed(2)} kg</p></div>
+                <div><h3 class="font-bold">Concrete Quantity Calculation for Column:</h3><p>Weight of cement: ${result.weight_cement_column.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags_column}</p><p>Weight of sand: ${result.weight_sand_column.toFixed(2)} kg (${result.sand_tons_column.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate_column.toFixed(2)} kg</p><p>Weight of cement (x4): ${result.weight_cement_column_x4.toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_column_x4}</p><p>Weight of sand (x4): ${result.sand_tons_column_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_column_x4.toFixed(2)} kg</p></div>
                 <div><h3 class="font-bold">Footing Design:</h3><p>The required length of the footing (L) is: ${result.footing_L.toFixed(4)} meters</p><p>REVISED VALUE OF L_1: ${result.L_1.toFixed(4)} meters</p><p>Sigma Max: ${result.sigma_max.toFixed(4)} kN/m²</p><p>Sigma Min: ${result.sigma_min.toFixed(4)} kN/m²</p>${result.effective_depth > 0 ? `<p>The required effective depth of the footing (d) is: ${result.effective_depth.toFixed(4)} mm</p><p>Overall depth D = d + 60 (rounded to nearest 10): ${Math.round((result.effective_depth + 60) / 10) * 10} mm</p><p>Overall depth for shear consideration (2*D): ${result.overall_depth_shear} mm</p><p>Effective depth (Overall depth - 60): ${result.effective_depth.toFixed(4)} mm</p>` : ''}</div>
                 <div><h3 class="font-bold">Footing Reinforcement Calculation:</h3><p>The required area of reinforcement (Ast) is: ${result.Ast_footing.toFixed(2)} mm²</p>${result.no_of_bars_footing > 0 ? `<p>Provide ${result.no_of_bars_footing} bars of 10 mm dia at ${result.spacing_footing} mm c/c</p>` : ''}</div>
                 <div><h3 class="font-bold">Steel Quantity of Footing:</h3><p>Gross weight of steel (including 5% wastage): ${result.gross_weight_steel_footing} kg</p><p>Gross weight of steel (including 5% wastage) (x4): ${result.gross_weight_steel_footing_x4} kg</p></div>
-                <div><h3 class="font-bold">Concrete Quantity Calculation for Footing:</h3><p>Weight of cement: ${result.weight_cement_footing.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags_footing}</p><p>Weight of sand: ${result.weight_sand_footing.toFixed(2)} kg (${result.sand_tons_footing.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate_footing.toFixed(2)} kg</p><p>Weight of cement (x4): ${(result.weight_cement_footing * 4).toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_footing_x4}</p><p>Weight of sand (x4): ${result.sand_tons_footing_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_footing_x4.toFixed(2)} kg</p></div>
+                <div><h3 class="font-bold">Concrete Quantity Calculation for Footing:</h3><p>Weight of cement: ${result.weight_cement_footing.toFixed(2)} kg</p><p>Number of cement bags (50kg): ${result.no_cement_bags_footing}</p><p>Weight of sand: ${result.weight_sand_footing.toFixed(2)} kg (${result.sand_tons_footing.toFixed(2)} tons)</p><p>Weight of aggregate: ${result.weight_aggregate_footing.toFixed(2)} kg</p><p>Weight of cement (x4): ${result.weight_cement_footing_x4.toFixed(2)} kg</p><p>Number of cement bags (50kg) (x4): ${result.no_cement_bags_footing_x4}</p><p>Weight of sand (x4): ${result.sand_tons_footing_x4.toFixed(2)} tons</p><p>Weight of aggregate (x4): ${result.weight_aggregate_footing_x4.toFixed(2)} kg</p></div>
                 <div><h3 class="font-bold">Cost Calculation (for 4 units):</h3><p>Total steel weight: ${result.total_steel_weight_x4.toFixed(2)} kg</p><p>Steel cost: ${result.steel_cost.toFixed(2)}</p><p>Cement cost: ${result.cement_cost.toFixed(2)}</p><p>Sand cost: ${result.sand_cost.toFixed(2)}</p><p>Aggregate cost: ${result.aggregate_cost.toFixed(2)}</p><p>Total cost: ${result.total_cost.toFixed(2)}</p></div>
             `;
         }
